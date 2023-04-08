@@ -1,5 +1,5 @@
 const { ObjectId } = require("mongodb");
-const UserModel = require("../Models/UserModel");
+const UserModel = require("../Models/User");
 
 class UserController {
   static async getUser(req, res) {
@@ -7,7 +7,8 @@ class UserController {
       console.log("get user");
       var status = 200,
         message = "success";
-      const users = await UserModel.All();
+      const users = await UserModel.find();
+      console.log({ data: users });
       if (users.length == 0) {
         (status = 404), (message = "data not found");
       }
@@ -24,27 +25,21 @@ class UserController {
       console.log("name : ", name);
       console.log("email : ", email);
       console.log("age : ", age);
-      if (name === "") {
-        res.status(400).json({ message: "name is required" });
-      }
-      if (email === "") {
-        res.status(400).json({ message: "email is required" });
-      }
-      if (age === null || age === 0) {
-        res.status(400).json({ message: "age is required" });
-      }
-      const insert = await UserModel.Create(req.body);
-      console.log("inserted id", insert.insertedId);
+
+      const insert = await UserModel.create(req.body);
+      console.log("inserted data", insert);
       // console.log({ body });
-      res.json({ data: insert.insertedId });
-    } catch (error) {}
+      res.json({ data: insert, status: 200, message: "success" });
+    } catch (error) {
+      res.status(500).send({ error: error.errors, status: 500, message: "failed" });
+    }
   }
 
   static async getByID(req, res) {
     try {
       console.log("get user by id");
 
-      const user_data = await UserModel.ByID(req.params.user_id);
+      const user_data = await UserModel.findById(req.params.user_id);
       var status = 200,
         message = "success";
       if (user_data.length == 0) {
@@ -60,11 +55,14 @@ class UserController {
       console.log("update user by id");
       const id = req.params.user_id;
       const body = req.body;
-      const update = await UserModel.update(id, body);
+      //   console.log({ id });
+      //   console.log({ body });
+      const update = await UserModel.updateOne({ _id: id }, body);
+      //   console.log({ update });
       if (update.ok) {
-        res.status(200).json({ status: 200, message: "success", data: update.value });
+        res.status(200).json({ status: 200, message: "success update", data: update.value });
       } else {
-        res.status(400).json({ status: 400, message: "failed" });
+        res.status(400).json({ status: 400, message: "failed", error: update.lastErrorObject });
       }
     } catch (error) {
       console.log("failed update with : ", error);
@@ -76,8 +74,9 @@ class UserController {
     try {
       console.log("delete user");
       const id = req.params.user_id;
-      const deleteUser = await UserModel.delete(id);
-      if (deleteUser.deletedCount) {
+      const deleteUser = await UserModel.deleteOne({ _id: id });
+      console.log(deleteUser);
+      if (deleteUser) {
         res.status(200).json({ status: 200, message: "success" });
       } else {
         res.status(400).json({ status: 400, message: "failed" });
